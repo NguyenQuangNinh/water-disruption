@@ -14,8 +14,8 @@ provider:
   architecture: arm64
   timeout: 17
   versionFunctions: false
-  profile: bosker
-  region: us-east-1
+  profile: ${opt:aws-profile, ''}
+  region: ${opt:region, ''}
   iam:
     role:
       statements:
@@ -75,7 +75,7 @@ functions:
           timezone: Asia/Bangkok
     environment:
       SCHEDULE_TABLE: !Ref ScheduleTable
-      TABLE_REGION: !Ref TableRegion
+      TABLE_REGION: ${self:provider.region}
     layers:
       - Ref: PythonRequirementsLambdaLayer
   notification:
@@ -85,7 +85,7 @@ functions:
           arn: !GetAtt ScheduleSQS.Arn
     environment:
       SCHEDULE_TABLE: !Ref ScheduleTable
-      TABLE_REGION: !Ref TableRegion
+      TABLE_REGION: ${self:provider.region}
       CHAT_ID: !Ref ChatID
       CHAT_TOKEN: !Ref ChatToken
     layers:
@@ -97,9 +97,6 @@ resources:
     ScheduleTable:
       Type: String
       Default: lich-cup-nuoc
-    TableRegion:
-      Type: String
-      Default: us-east-1
     ChatID:
       Type: AWS::SSM::Parameter::Value<String>
       Default: /lich-cup-nuoc/chatid

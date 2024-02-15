@@ -15,5 +15,5 @@ Go to AWS parameter store and create 2 paramters to store Telegram ChatID and Bo
 ```
 Then deploy
 ```
-$ serverless deploy
+sls deploy --aws-profile bosker --region us-east-1
 ```
