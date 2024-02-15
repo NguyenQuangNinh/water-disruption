@@ -1,0 +1,169 @@
+service: lich-cup-nuoc
+
+frameworkVersion: '3'
+plugins:
+  localPath: .serverless_plugins
+  modules:
+    - serverless-python-requirements
+
+provider:
+  name: aws
+  runtime: python3.11
+  lambdaHashingVersion: 20201221
+  memorySize: 128
+  architecture: arm64
+  timeout: 17
+  versionFunctions: false
+  profile: bosker
+  region: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Sid: DynamoDBTableAccess
+          Action:
+            - dynamodb:Get*
+            - dynamodb:Query
+            - dynamodb:Update*
+            - dynamodb:BatchWriteItem
+            - dynamodb:DescribeStream
+            - dynamodb:ListStreams
+            - dynamodb:PutItem
+            - dynamodb:Scan
+            - dynamodb:Delete*
+            - dynamodb:BatchGet*
+          Resource:
+            - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ScheduleTable}
+        - Effect: Allow
+          Sid: AllowGetSsm
+          Action:
+            - ssm:GetParameters
+            - ssm:GetParameter
+          Resource:
+            - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/lich-cup-nuoc/token
+            - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/lich-cup-nuoc/chatid
+
+custom:
+  pythonRequirements:
+    slim: true
+    layer: true
+
+package:
+  individually: true
+  patterns:
+    - '!htmlcov'
+    - '!.venv'
+    - '!node_modules'
+    - '!.serverless/requirements'
+    - "!${opt:package, '.serverless'}"
+    - '!configs'
+    - '!*.yml*'
+    - '!*.json'
+    - '!*.sh'
+    - 'lib'
+    - '*.py'
+  excludeDevDependencies: false
+
+functions:
+  crawler:
+    handler: handler.crawl
+    events:
+      - schedule:
+          method: scheduler
+          rate:
+            - cron(0 10 * * ? *)
+          timezone: Asia/Bangkok
+    environment:
+      SCHEDULE_TABLE: !Ref ScheduleTable
+      TABLE_REGION: !Ref TableRegion
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+  notification:
+    handler: handler.notify
+    events:
+      - sqs:
+          arn: !GetAtt ScheduleSQS.Arn
+    environment:
+      SCHEDULE_TABLE: !Ref ScheduleTable
+      TABLE_REGION: !Ref TableRegion
+      CHAT_ID: !Ref ChatID
+      CHAT_TOKEN: !Ref ChatToken
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+
+
+resources:
+  Parameters:
+    ScheduleTable:
+      Type: String
+      Default: lich-cup-nuoc
+    TableRegion:
+      Type: String
+      Default: us-east-1
+    ChatID:
+      Type: AWS::SSM::Parameter::Value<String>
+      Default: /lich-cup-nuoc/chatid
+    ChatToken:
+      Type: AWS::SSM::Parameter::Value<String>
+      Default: /lich-cup-nuoc/token
+  Resources:
+    ScheduleTableDynamoDB:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: !Ref ScheduleTable
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+    ScheduleSQS:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: 'ScheduleSQS'
+    SchedulePipe:
+      Type: AWS::Pipes::Pipe
+      Properties:
+        Name: 'schedule-pipe'
+        Description: A pipe to transfer data from schedule dynamodb
+        Source: !GetAtt ScheduleTableDynamoDB.StreamArn
+        SourceParameters:
+          DynamoDBStreamParameters:
+            StartingPosition: LATEST
+            BatchSize: 1
+        RoleArn: !GetAtt PipeRole.Arn
+        Target: !GetAtt ScheduleSQS.Arn
+    PipeRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: schedule-pipe-role
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - pipes.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: schedule-put-sqs-pipe-policy
+            PolicyDocument:
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:GetRecords
+                    - dynamodb:GetShardIterator
+                    - dynamodb:ListStreams
+                    - dynamodb:DescribeStream
+                  Resource:
+                    - !GetAtt ScheduleTableDynamoDB.StreamArn
+                - Effect: Allow
+                  Action:
+                    - sqs:SendMessage
+                  Resource:
+                    - !GetAtt ScheduleSQS.Arn
