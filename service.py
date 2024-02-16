@@ -33,7 +33,6 @@ def sent_text(message):
 
 
 def crawl():
-    date_pattern = r'\b\d{2}/\d{2}/\d{4}\b'
     try:
         result = requests.get(os.environ["SOURCE_URL"], timeout=15)
         result.raise_for_status()
