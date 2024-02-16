@@ -1,9 +1,9 @@
 
 
 
-# Lịch cúp nước
+# Lịch cúp nước (Water disruption plan)
 
-Notify when there are new water interruption
+Notify Telegram users when there are new water outages
 ## Usage
 
 ### Deployment
