@@ -12,6 +12,3 @@ def insert(schedule):
     except ClientError as e:
         if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
             print("Skip old news")
-    except Exception as e:
-        print("Error when insert schedule {}".format(e))
-

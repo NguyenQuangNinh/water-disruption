@@ -3,9 +3,7 @@ import service as service
 
 
 def crawl(event, context):
-    service.detect_news()
-
-    return {"statusCode": 200, "body": json.dumps({})}
+    service.crawl()
 
 
 def notify(event, context):
@@ -18,4 +16,4 @@ def notify(event, context):
 
 
 if __name__ == "__main__":
-    service.detect_news()
+    service.crawl()

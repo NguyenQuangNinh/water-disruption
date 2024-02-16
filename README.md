@@ -10,7 +10,7 @@ Notify Telegram users when there are new water outages
 
 Deploy infra
 ```
-sls deploy --aws-profile <profile> --region <region> --param="chatid=<chat-id-value>" --param="token=bot<token-value>" -c serverless-infra.yml
+sls deploy --aws-profile <profile> --region <region> --param="chatid=<chat-id-value>" --param="token=bot<token-value>" --param="email=<email>" -c serverless-infra.yml
 ```
 Then deploy service
 ```

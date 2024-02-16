@@ -42,6 +42,12 @@ provider:
           Resource:
             - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/lich-cup-nuoc/token
             - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/lich-cup-nuoc/chatid
+        - Effect: Allow
+          Sid: AllowSendEmail
+          Action:
+            - ses:SendEmail
+          Resource:
+            - '*'
 
 custom:
   pythonRequirements:
@@ -76,6 +82,8 @@ functions:
     environment:
       SCHEDULE_TABLE: !Ref ScheduleTable
       TABLE_REGION: ${self:provider.region}
+      ADMIN_EMAIL: !Ref AdminEmail
+      SOURCE_URL: 'https://capnuoccholon.com.vn/tin-tuc/tb-tam-ngung-cung-cap-nuoc-quan-5.html'
     layers:
       - Ref: PythonRequirementsLambdaLayer
   notification:
@@ -88,6 +96,8 @@ functions:
       TABLE_REGION: ${self:provider.region}
       CHAT_ID: !Ref ChatID
       CHAT_TOKEN: !Ref ChatToken
+      ADMIN_EMAIL: !Ref AdminEmail
+      NOTIFICATION_URL: 'https://api.telegram.org/{}/sendMessage?chat_id={}&text={}'
     layers:
       - Ref: PythonRequirementsLambdaLayer
 
@@ -103,6 +113,9 @@ resources:
     ChatToken:
       Type: AWS::SSM::Parameter::Value<String>
       Default: /lich-cup-nuoc/token
+    AdminEmail:
+      Type: AWS::SSM::Parameter::Value<String>
+      Default: /lich-cup-nuoc/admin-email
   Resources:
     ScheduleTableDynamoDB:
       Type: AWS::DynamoDB::Table

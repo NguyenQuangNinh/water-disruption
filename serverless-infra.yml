@@ -46,3 +46,14 @@ resources:
         Type: "String"
         Value: ${param:token, ''}
         Description: "Chat Token"
+    AdminEmailSSMParam:
+      Type: "AWS::SSM::Parameter"
+      Properties:
+        Name: "/lich-cup-nuoc/admin-email"
+        Type: "String"
+        Value: ${param:email, ''}
+        Description: "Chat Token"
+    EmailIdentity:
+      Type: AWS::SES::EmailIdentity
+      Properties:
+        EmailIdentity: ${param:email, ''}
