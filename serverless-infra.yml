@@ -1,0 +1,48 @@
+service: lich-cup-nuoc-infra
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+  lambdaHashingVersion: 20201221
+  memorySize: 128
+  architecture: arm64
+  timeout: 17
+  versionFunctions: false
+  profile: ${opt:aws-profile, ''}
+  region: ${opt:region, ''}
+
+package:
+  individually: true
+  patterns:
+    - '!htmlcov'
+    - '!.venv'
+    - '!node_modules'
+    - '!.serverless/requirements'
+    - "!${opt:package, '.serverless'}"
+    - '!configs'
+    - '!*.yml*'
+    - '!*.json'
+    - '!*.sh'
+    - 'lib'
+    - '*.py'
+  excludeDevDependencies: false
+
+
+resources:
+  Resources:
+    ChatIDSSMParam:
+      Type: "AWS::SSM::Parameter"
+      Properties:
+        Name: "/lich-cup-nuoc/chatid"
+        Type: "String"
+        Value: ${param:chatid, ''}
+        Description: "Chat ID"
+    ChatTokenSSMParam:
+      Type: "AWS::SSM::Parameter"
+      Properties:
+        Name: "/lich-cup-nuoc/token"
+        Type: "String"
+        Value: ${param:token, ''}
+        Description: "Chat Token"
