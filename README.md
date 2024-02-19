@@ -16,3 +16,5 @@ Then deploy service
 ```
 sls deploy --aws-profile <profile> --region <region>
 ```
+## System design
+![Architecture Diaram](diagram.png)
