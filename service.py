@@ -34,18 +34,39 @@ def sent_text(message):
 
 def crawl():
     try:
-        result = requests.get(os.environ["SOURCE_URL"], timeout=15)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+        }
+        print(f"Fetching URL: {os.environ['SOURCE_URL']}")
+        result = requests.get(
+            os.environ["SOURCE_URL"],
+            timeout=30,  # Increased timeout
+            headers=headers,
+            verify=True  # Explicitly verify SSL
+        )
+        print(f"Response status code: {result.status_code}")
         result.raise_for_status()
         soup = bs4.BeautifulSoup(result.text, "html.parser")
-        for item in soup.select("#postContent>a"):
+        items = soup.select("#postContent>a")
+        print(f"Found {len(items)} items to process")
+        for item in items:
             content = format_content(item.contents)
             pk = md5(content.encode()).hexdigest()
             schedule_repository.insert({
                 "pk": pk,
                 "data": content
             })
+    except requests.exceptions.SSLError as e:
+        send_email(f"SSL Error while retrieving water outages info: {e}")
+    except requests.exceptions.ConnectionError as e:
+        send_email(f"Connection Error while retrieving water outages info: {e}")
+    except requests.exceptions.Timeout as e:
+        send_email(f"Timeout Error while retrieving water outages info: {e}")
     except Exception as e:
-        send_email(f"Exception during retrieving water outages info: {e}")
+        send_email(f"Exception during retrieving water outages info: {str(e)}")
 
 
 def send_email(content):
